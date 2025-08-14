@@ -101,7 +101,7 @@ with tab2:
     address = st.text_area("Address")
     source = st.selectbox("Source", ["Instagram", "Referral", "Walk-in", "Other"])
     status = st.selectbox("Status", ["pending", "processing", "onboarded", "rejected"])
-    first_contacted = st.date_input("First Contacted")
+    first_contacted = st.date_input("First Contacted", value=None)
     next_update = st.date_input("Next Update", value=first_contacted )
     notes = st.text_area("Notes")
     # If next_update is same as first_contacted, store None
