@@ -1,83 +1,66 @@
-# db1.py
 import os
-import pandas as pd
 import psycopg2
+import pandas as pd
+from dotenv import load_dotenv
 import streamlit as st
-from psycopg2.extras import RealDictCursor
 
-# Load local .env when present (so you can keep developing locally)
-if os.path.exists(".env"):
-    from dotenv import load_dotenv
-    load_dotenv()
+load_dotenv()
 
-# Prefer environment variables, fallback to streamlit secrets
-DB_HOST = os.getenv("DB_HOST") or st.secrets.get("DB_HOST")
-DB_PORT = os.getenv("DB_PORT") or st.secrets.get("DB_PORT")
-DB_NAME = os.getenv("DB_NAME") or st.secrets.get("DB_NAME")
-DB_USER = os.getenv("DB_USER") or st.secrets.get("DB_USER")
-DB_PASS = os.getenv("DB_PASS") or st.secrets.get("DB_PASS")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
 
+# ✅ Persistent connection
+@st.cache_resource
 def get_connection():
-    # If any of these are None, this will raise — good for failing fast
-    conn = psycopg2.connect(
+    return psycopg2.connect(
         host=DB_HOST,
-        port=int(DB_PORT) if DB_PORT else None,
+        port=DB_PORT,
         dbname=DB_NAME,
         user=DB_USER,
-        password=DB_PASS,
-        sslmode="require"  # Keeps it safe for hosted Postgres like Supabase; remove if not needed
+        password=DB_PASS
     )
-    return conn
 
+# ✅ Cached data fetch
+@st.cache_data(ttl=30)  # cache for 30 seconds
 def get_all_leads():
-    with get_connection() as conn:
-        df = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
+    conn = get_connection()
+    df = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
     return df
 
-def insert_lead(name, contact, address, source, status, first_contacted=None, notes=None):
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO leads (name, contact_number, address, source, status, first_contacted, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """,
-                (name, contact, address, source, status,
-                 first_contacted if first_contacted is not None else None,
-                 notes)
-            )
-        conn.commit()
+# Insert, update, delete clear cache so changes reflect instantly
+def insert_lead(name, contact, address, source, status, first_contacted, notes):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO leads (name, contact_number, address, source, status, first_contacted, notes)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (name, contact, address, source, status, first_contacted, notes))
+    conn.commit()
+    st.cache_data.clear()
 
 def update_lead_status(lead_id, new_status, notes=""):
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            # get old status
-            cur.execute("SELECT status FROM leads WHERE id=%s", (lead_id,))
-            row = cur.fetchone()
-            old_status = row[0] if row else None
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE leads 
+        SET status=%s, notes=%s, updated_at=NOW()
+        WHERE id=%s
+    """, (new_status, notes, lead_id))
 
-            # update main table
-            cur.execute(
-                """
-                UPDATE leads
-                SET status=%s, notes=%s, updated_at=NOW()
-                WHERE id=%s
-                """,
-                (new_status, notes, lead_id)
-            )
+    cur.execute("""
+        INSERT INTO lead_history (lead_id, old_status, new_status, changed_at, notes)
+        SELECT id, status, %s, NOW(), %s FROM leads WHERE id=%s
+    """, (new_status, notes, lead_id))
 
-            # insert history record
-            cur.execute(
-                """
-                INSERT INTO lead_history (lead_id, old_status, new_status, changed_at, notes)
-                VALUES (%s, %s, %s, NOW(), %s)
-                """,
-                (lead_id, old_status, new_status, notes)
-            )
-        conn.commit()
+    conn.commit()
+    st.cache_data.clear()
 
 def delete_lead(lead_id):
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM leads WHERE id = %s", (lead_id,))
-        conn.commit()
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM leads WHERE id = %s", (lead_id,))
+    conn.commit()
+    st.cache_data.clear()
