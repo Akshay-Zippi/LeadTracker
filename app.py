@@ -8,7 +8,7 @@ from PIL import Image
 st.set_page_config(page_title="Lead Tracker", layout="wide")
 
 # --- Load Logo ---
-logo_path = "/Users/akshayr/PycharmProjects/pythonProject/LeadTracker/logo2.png"
+logo_path = "logo2.png"
 logo = Image.open(logo_path)
 
 # --- CSS for background & positioning ---
@@ -25,7 +25,7 @@ st.markdown("""
             z-index: 100;
         }
     </style>
-    <img src="file:///Users/akshayr/PycharmProjects/pythonProject/LeadTracker/logo1.png" class="logo">
+    <img src="file://logo1.png" class="logo">
 """, unsafe_allow_html=True)
 
 # --- Display logo ---
