@@ -273,7 +273,7 @@ with tab4:
                     row.get("notes", "")
                 )
 
+
             st.success(f"{len(valid_rows)} leads inserted successfully!")
             if not invalid_rows.empty:
                 st.warning(f"{len(invalid_rows)} rows failed validation. Check 'errors' column above.")
-            
