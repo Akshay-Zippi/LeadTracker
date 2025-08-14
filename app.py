@@ -33,7 +33,7 @@ st.image(logo, width=120, use_container_width =False, output_format="PNG")
 
 st.set_page_config(page_title="Lead Tracker", layout="wide")
 
-st.title("🤝 Lead Tracker")
+st.title("📕 Lead Tracker")
 
 tab1, tab2, tab3, tab4 = st.tabs(["📊 All Leads", "➕ Add Lead", "📋 Manage Leads", "📂 Bulk Upload"])
 
