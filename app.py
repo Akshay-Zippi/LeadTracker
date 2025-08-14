@@ -112,7 +112,18 @@ with tab2:
         if name and contact:
             insert_lead(name, contact, address, source, status,first_contacted, notes)
             st.success("✅ Lead Added Successfully!")
-            st.experimental_rerun()
+
+            # Clear cache so All Leads tab reloads
+            st.cache_data.clear()
+
+            # Reset form fields
+            for field in ["add_name", "add_contact", "add_address", "add_source", "add_status", "add_notes",
+                          "add_first_contacted", "add_next_update"]:
+                if field in st.session_state:
+                    del st.session_state[field]
+
+            # Rerun app to show cleared form
+            st.rerun()
         else:
             st.warning("⚠️ Name & Contact are required.")
 
