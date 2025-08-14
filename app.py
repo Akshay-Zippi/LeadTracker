@@ -112,7 +112,7 @@ with tab2:
         if name and contact:
             insert_lead(name, contact, address, source, status,first_contacted, notes)
             st.success("✅ Lead Added Successfully!")
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.warning("⚠️ Name & Contact are required.")
 
