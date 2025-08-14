@@ -4,4 +4,4 @@ sqlalchemy
 supabase
 python-dotenv
 pandas
-PIL
+pillow
