@@ -160,6 +160,7 @@ with tab3:
                 "Date Between",
                 (min_date, max_date),
                 key="manage_date"
+
             )
 
         else:
@@ -207,7 +208,7 @@ with tab3:
                 if st.button("✅", key=f"update_{row['id']}"):
                     update_lead_status(row['id'], new_status, update_notes)
                     st.success(f"Lead {row['name']} updated!")
-                    st.experimental_rerun()
+                    st.rerun()
             with cols[4]:
                 if st.button("🗑️", key=f"del_{row['id']}"):
                     delete_lead(row['id'])
