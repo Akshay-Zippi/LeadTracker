@@ -3,8 +3,6 @@ import psycopg2
 import pandas as pd
 from dotenv import load_dotenv
 import streamlit as st
-from sqlalchemy import create_engine, text
-
 
 load_dotenv()
 
@@ -13,6 +11,7 @@ DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
+
 
 # ✅ Persistent connection
 @st.cache_resource
@@ -25,6 +24,7 @@ def get_connection():
         password=DB_PASS
     )
 
+
 # ✅ Cached data fetch
 @st.cache_data(ttl=30)  # cache for 30 seconds
 def get_all_leads():
@@ -32,7 +32,8 @@ def get_all_leads():
     df = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
     return df
 
-# Insert, update, delete clear cache so changes reflect instantly
+
+# ✅ Insert Lead
 def insert_lead(name, contact, address, source, status, first_contacted, notes):
     conn = get_connection()
     cur = conn.cursor()
@@ -44,45 +45,35 @@ def insert_lead(name, contact, address, source, status, first_contacted, notes):
     st.cache_data.clear()
 
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-engine = create_engine(DATABASE_URL)
+# ✅ Full Lead Update (name, contact, source, status, first_contacted, notes)
+def update_lead(lead_id, name, contact_number, source, status, first_contacted, notes):
+    conn = get_connection()
+    cur = conn.cursor()
 
+    # Update main lead record
+    cur.execute("""
+        UPDATE leads 
+        SET name = %s,
+            contact_number = %s,
+            source = %s,
+            status = %s,
+            first_contacted = %s,
+            notes = %s,
+            updated_at = NOW()
+        WHERE id = %s
+    """, (name, contact_number, source, status, first_contacted, notes, lead_id))
 
-def update_lead(
-        lead_id,
-        name,
-        contact_number,
-        source,
-        status,
-        first_contacted,
-        notes
-):
-    """Update all editable fields for a lead."""
-    with engine.connect() as conn:
-        query = text("""
-            UPDATE leads
-            SET 
-                name = :name,
-                contact_number = :contact_number,
-                source = :source,
-                status = :status,
-                first_contacted = :first_contacted,
-                notes = :notes
-            WHERE id = :lead_id
-        """)
+    # Insert into history table
+    cur.execute("""
+        INSERT INTO lead_history (lead_id, old_status, new_status, changed_at, notes)
+        VALUES (%s, NULL, %s, NOW(), %s)
+    """, (lead_id, status, notes))
 
-        conn.execute(query, {
-            "lead_id": lead_id,
-            "name": name,
-            "contact_number": contact_number,
-            "source": source,
-            "status": status,
-            "first_contacted": first_contacted,
-            "notes": notes
-        })
-        conn.commit()
+    conn.commit()
     st.cache_data.clear()
 
+
+# ✅ Delete Lead
 def delete_lead(lead_id):
     conn = get_connection()
     cur = conn.cursor()
