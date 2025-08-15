@@ -3,6 +3,8 @@ import psycopg2
 import pandas as pd
 from dotenv import load_dotenv
 import streamlit as st
+from sqlalchemy import create_engine, text
+
 
 load_dotenv()
 
@@ -41,21 +43,44 @@ def insert_lead(name, contact, address, source, status, first_contacted, notes):
     conn.commit()
     st.cache_data.clear()
 
-def update_lead_status(lead_id, new_status, notes=""):
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        UPDATE leads 
-        SET status=%s, notes=%s, updated_at=NOW()
-        WHERE id=%s
-    """, (new_status, notes, lead_id))
 
-    cur.execute("""
-        INSERT INTO lead_history (lead_id, old_status, new_status, changed_at, notes)
-        SELECT id, status, %s, NOW(), %s FROM leads WHERE id=%s
-    """, (new_status, notes, lead_id))
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
 
-    conn.commit()
+
+def update_lead(
+        lead_id,
+        name,
+        contact_number,
+        source,
+        status,
+        first_contacted,
+        notes
+):
+    """Update all editable fields for a lead."""
+    with engine.connect() as conn:
+        query = text("""
+            UPDATE leads
+            SET 
+                name = :name,
+                contact_number = :contact_number,
+                source = :source,
+                status = :status,
+                first_contacted = :first_contacted,
+                notes = :notes
+            WHERE id = :lead_id
+        """)
+
+        conn.execute(query, {
+            "lead_id": lead_id,
+            "name": name,
+            "contact_number": contact_number,
+            "source": source,
+            "status": status,
+            "first_contacted": first_contacted,
+            "notes": notes
+        })
+        conn.commit()
     st.cache_data.clear()
 
 def delete_lead(lead_id):
