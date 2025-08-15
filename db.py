@@ -46,7 +46,7 @@ def insert_lead(name, contact, address, source, status, first_contacted, notes):
 
 
 # ✅ Full Lead Update (name, contact, source, status, first_contacted, notes)
-def update_lead(lead_id, name, contact_number, source, status, first_contacted, notes):
+def update_lead_status(lead_id, name, contact_number, source, status, first_contacted, notes):
     conn = get_connection()
     cur = conn.cursor()
 
