@@ -47,11 +47,12 @@ def insert_lead(name, contact, address, source, status, first_contacted, notes):
 
 
 # ✅ Full Lead Update (name, contact, source, status, first_contacted, notes)
+
 def update_lead_status(lead_id, name, contact_number, source, status, first_contacted, notes):
     conn = get_connection()
     cur = conn.cursor()
 
-    # Handle date type and None
+    # ✅ Normalize first_contacted to a proper datetime or None
     if isinstance(first_contacted, date) and not isinstance(first_contacted, datetime):
         first_contacted = datetime.combine(first_contacted, datetime.min.time())
     elif first_contacted in ("", None):
