@@ -3,6 +3,7 @@ import psycopg2
 import pandas as pd
 from dotenv import load_dotenv
 import streamlit as st
+from datetime import datetime, date
 
 load_dotenv()
 
@@ -50,24 +51,17 @@ def update_lead_status(lead_id, name, contact_number, source, status, first_cont
     conn = get_connection()
     cur = conn.cursor()
 
-    # Update main lead record
+    # Handle date type and None
+    if isinstance(first_contacted, date) and not isinstance(first_contacted, datetime):
+        first_contacted = datetime.combine(first_contacted, datetime.min.time())
+    elif first_contacted in ("", None):
+        first_contacted = None
+
     cur.execute("""
         UPDATE leads 
-        SET name = %s,
-            contact_number = %s,
-            source = %s,
-            status = %s,
-            first_contacted = %s,
-            notes = %s,
-            updated_at = NOW()
+        SET name = %s, contact_number = %s, source = %s, status = %s, first_contacted = %s, notes = %s, updated_at = NOW()
         WHERE id = %s
     """, (name, contact_number, source, status, first_contacted, notes, lead_id))
-
-    # Insert into history table
-    cur.execute("""
-        INSERT INTO lead_history (lead_id, old_status, new_status, changed_at, notes)
-        VALUES (%s, NULL, %s, NOW(), %s)
-    """, (lead_id, status, notes))
 
     conn.commit()
     st.cache_data.clear()
