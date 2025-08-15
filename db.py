@@ -48,14 +48,25 @@ def insert_lead(name, contact, address, source, status, first_contacted, notes):
 
 # ✅ Full Lead Update (name, contact, source, status, first_contacted, notes)
 
+from datetime import datetime, date
+
 def update_lead_status(lead_id, name, contact_number, source, status, first_contacted, notes):
     conn = get_connection()
     cur = conn.cursor()
 
-    # ✅ Normalize first_contacted to a proper datetime or None
-    if isinstance(first_contacted, date) and not isinstance(first_contacted, datetime):
+    # ✅ Normalize first_contacted
+    if isinstance(first_contacted, str):
+        first_contacted = first_contacted.strip()
+        if first_contacted:
+            try:
+                first_contacted = datetime.strptime(first_contacted, "%Y-%m-%d")
+            except ValueError:
+                first_contacted = None
+        else:
+            first_contacted = None
+    elif isinstance(first_contacted, date) and not isinstance(first_contacted, datetime):
         first_contacted = datetime.combine(first_contacted, datetime.min.time())
-    elif first_contacted in ("", None):
+    elif not first_contacted:
         first_contacted = None
 
     cur.execute("""
