@@ -234,7 +234,7 @@ with tab3:
             with cols[5]:
                 new_licence = st.selectbox(
                     f"Licence ({row['id']})",
-                    ["Yes", "No"],
+                    ["yes", "no"],
                     index=["yes", "no"].index(row["licence"]) if row["licence"] in ["yes", "no"] else 1,
                     key=f"licence_{row['id']}"
                 )
