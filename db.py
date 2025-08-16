@@ -38,6 +38,7 @@ def get_all_leads():
     return pd.read_sql("SELECT * FROM leads ORDER BY id DESC", engine)
 
 def insert_lead(name, contact, address, source, status, first_contacted=None, notes=None, licence="no", scheduled_walk_in=None):
+    licence = licence.lower() if licence else None
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -63,6 +64,7 @@ def update_lead_status(
     licence="no",
     scheduled_walk_in=None
 ):
+    licence = licence.lower() if licence else None
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT status FROM leads WHERE id=%s", (lead_id,))
