@@ -118,7 +118,17 @@ with tab2:
 
     if st.button("Save Lead", key="save_lead"):
         if name and contact:
-            insert_lead(name, contact, address, source, status, first_contacted, licence, scheduled_walk_in, notes)
+            insert_lead(
+                name=name,
+                contact=contact,
+                address=address,
+                source=source,
+                status=status,
+                first_contacted=first_contacted,
+                notes=notes,
+                licence=licence,
+                scheduled_walk_in=scheduled_walk_in
+            )
             st.success("✅ Lead Added Successfully!")
             st.cache_data.clear()
             st.rerun()

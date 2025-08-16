@@ -37,18 +37,44 @@ def get_connection():
 def get_all_leads():
     return pd.read_sql("SELECT * FROM leads ORDER BY id DESC", engine)
 
-def insert_lead(name, contact, address, source, status, first_contacted=None, notes=None, licence="no", scheduled_walk_in=None):
-    licence = licence.lower() if licence else None
+def insert_lead(
+    name,
+    contact,
+    address,
+    source,
+    status,
+    first_contacted=None,
+    notes=None,
+    licence="no",
+    scheduled_walk_in=None
+):
+    # ensure licence is always a string "yes"/"no" or None
+    if isinstance(licence, str):
+        licence = licence.lower()
+    else:
+        licence = None
+
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO leads (name, contact_number, address, source, status, first_contacted, notes, licence, scheduled_walk_in)
+                INSERT INTO leads (
+                    name, contact_number, address, source, status,
+                    first_contacted, notes, licence, scheduled_walk_in
+                )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
-                (name, contact, address, source, status,
-                 first_contacted if first_contacted else None,
-                 notes, licence, scheduled_walk_in)
+                (
+                    name,
+                    contact,
+                    address,
+                    source,
+                    status,
+                    first_contacted if first_contacted else None,
+                    notes,
+                    licence,
+                    scheduled_walk_in if scheduled_walk_in else None
+                )
             )
         conn.commit()
     st.cache_data.clear()
