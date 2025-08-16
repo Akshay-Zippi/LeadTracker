@@ -11,70 +11,61 @@ st.set_page_config(page_title="Lead Tracker", layout="wide")
 logo_path = "logo2.png"
 logo = Image.open(logo_path)
 
-# --- CSS for background & positioning ---
+# --- CSS + Logo ---
 st.markdown("""
     <style>
-        .stApp {
-            background-color: #40D0E0;
-        }
-        .logo {
-            position: fixed;
-            top: 10px;
-            right: 50px;
-            width: 120px;
-            z-index: 100;
-        }
+        .stApp { background-color: #40D0E0; }
+        .logo { position: fixed; top: 10px; right: 50px; width: 120px; z-index: 100; }
     </style>
     <img src="file://logo1.png" class="logo">
 """, unsafe_allow_html=True)
-
-# --- Display logo ---
-st.image(logo, width=120, use_container_width =False, output_format="PNG")
-
-st.set_page_config(page_title="Lead Tracker", layout="wide")
+st.image(logo, width=120, use_container_width=False, output_format="PNG")
 
 st.title("📕 Lead Tracker")
 
+# --- Tabs ---
 tab1, tab2, tab3, tab4 = st.tabs(["📊 All Leads", "➕ Add Lead", "📋 Manage Leads", "📂 Bulk Upload"])
 
-# --- Tab 1: All Leads ---
-with tab1:
-    st.markdown("""
-            <style>
-            /* Target only the container that holds tab1's content */
-            div[data-testid="stVerticalBlock"] > div:nth-of-type(4) {
-                background-color: rgba(100, 143, 137, 0.5) !important;
-                padding: 20px;
-                border-radius: 10px;
-            }
-            </style>
-        """, unsafe_allow_html=True)
 
+# =====================================================
+# TAB 1: ALL LEADS
+# =====================================================
+with tab1:
     st.subheader("All Leads")
 
     df_all = get_all_leads()
     if "first_contacted" in df_all.columns:
         df_all["first_contacted"] = pd.to_datetime(df_all["first_contacted"], errors="coerce")
+    if "scheduled_walk_in" in df_all.columns:
+        df_all["scheduled_walk_in"] = pd.to_datetime(df_all["scheduled_walk_in"], errors="coerce")
 
-    # Filters in single line
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # --- Filters ---
+    col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
     with col1:
-        selected_status = st.selectbox("Status", ["All"] + df_all["status"].dropna().unique().tolist(), index=0, key="filter_status")
+        selected_status = st.selectbox("Status", ["All"] + df_all["status"].dropna().unique().tolist(), index=0)
     with col2:
-        selected_source = st.selectbox("Source", ["All"] + df_all["source"].dropna().unique().tolist(), index=0, key="filter_source")
+        selected_source = st.selectbox("Source", ["All"] + df_all["source"].dropna().unique().tolist(), index=0)
     with col3:
-        selected_first_contacted = st.date_input("First Contacted", value=None, key="filter_first_contacted")
+        selected_licence = st.selectbox("Licence", ["All"] + df_all["licence"].dropna().unique().tolist(), index=0)
+    with col4:
+        first_contacted_date = st.date_input("First Contacted", value=None)
+    with col5:
+        walk_in_date = st.date_input("Scheduled Walk-in", value=None)
 
-    # Apply filters
+    # --- Apply Filters ---
     df_filtered = df_all.copy()
     if selected_status != "All":
         df_filtered = df_filtered[df_filtered["status"] == selected_status]
     if selected_source != "All":
         df_filtered = df_filtered[df_filtered["source"] == selected_source]
-    if selected_first_contacted:
-        df_filtered = df_filtered[df_filtered["first_contacted"].dt.date == selected_first_contacted]
+    if selected_licence != "All":
+        df_filtered = df_filtered[df_filtered["licence"] == selected_licence]
+    if first_contacted_date:
+        df_filtered = df_filtered[df_filtered["first_contacted"].dt.date == first_contacted_date]
+    if walk_in_date:
+        df_filtered = df_filtered[df_filtered["scheduled_walk_in"].dt.date == walk_in_date]
 
-    # Display table
+    # --- Display ---
     if not df_filtered.empty:
         st.dataframe(df_filtered, use_container_width=True)
         output = io.BytesIO()
@@ -89,11 +80,10 @@ with tab1:
     else:
         st.info("No leads match the filters.")
 
-    st.markdown("</div>", unsafe_allow_html=True)
 
-
-
-# --- Tab 2: Add Lead ---
+# =====================================================
+# TAB 2: ADD LEAD
+# =====================================================
 with tab2:
     st.subheader("Add New Lead")
     name = st.text_input("Name")
@@ -102,74 +92,45 @@ with tab2:
     source = st.selectbox("Source", ["Instagram", "Referral", "Walk-in", "Other"])
     status = st.selectbox("Status", ["pending", "processing", "onboarded", "rejected"])
     first_contacted = st.date_input("First Contacted", value=None)
-    next_update = st.date_input("Next Update", value=first_contacted )
     notes = st.text_area("Notes")
-    # If next_update is same as first_contacted, store None
-    if next_update == first_contacted:
-        next_update = None
+
+    licence = st.selectbox("Licence", ["yes", "no"])
+    scheduled_walk_in = st.date_input("Scheduled Walk-in", value=None)
 
     if st.button("Save Lead"):
         if name and contact:
-            insert_lead(name, contact, address, source, status,first_contacted, notes)
+            insert_lead(
+                name, contact, address, source, status,
+                first_contacted, notes, licence, scheduled_walk_in
+            )
             st.success("✅ Lead Added Successfully!")
-            # Clear cached leads so All Leads tab reloads
             st.cache_data.clear()
-
-            # Force page refresh
             st.rerun()
         else:
             st.warning("⚠️ Name & Contact are required.")
 
-# --- Tab 3: Manage Leads ---
-with tab3:
-    st.markdown("""
-        <style>
-        div[data-testid="stVerticalBlock"] > div:nth-of-type(4) {
-            background-color: rgba(100, 143, 137, 0.5) !important;
-            padding: 20px;
-            border-radius: 10px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
 
+# =====================================================
+# TAB 3: MANAGE LEADS
+# =====================================================
+with tab3:
     st.subheader("Manage Leads")
     df = get_all_leads()
 
     if "first_contacted" in df.columns:
         df["first_contacted"] = pd.to_datetime(df["first_contacted"], errors="coerce")
+    if "scheduled_walk_in" in df.columns:
+        df["scheduled_walk_in"] = pd.to_datetime(df["scheduled_walk_in"], errors="coerce")
 
     # --- Filters ---
-    st.markdown("### Filters")
-    col1, col2, col3, col4 = st.columns([1.5, 1.5, 2, 2])
-
+    col1, col2, col3 = st.columns([1.5, 1.5, 2])
     with col1:
-        selected_status = st.selectbox(
-            "Status", ["All"] + df["status"].dropna().unique().tolist(),
-            index=0, key="manage_status"
-        )
-
+        selected_status = st.selectbox("Status", ["All"] + df["status"].dropna().unique().tolist(), index=0, key="manage_status")
     with col2:
-        selected_source = st.selectbox(
-            "Source", ["All"] + df["source"].dropna().unique().tolist(),
-            index=0, key="manage_source"
-        )
-
+        selected_source = st.selectbox("Source", ["All"] + df["source"].dropna().unique().tolist(), index=0, key="manage_source")
     with col3:
         search_term = st.text_input("Search", key="manage_search")
 
-    with col4:
-        if "first_contacted" in df.columns and not df["first_contacted"].dropna().empty:
-            min_date = df["first_contacted"].dropna().min().date()
-            max_date = df["first_contacted"].dropna().max().date()
-            date_filter = st.date_input(
-                "Date Between",
-                (min_date, max_date),
-                key="manage_date"
-            )
-        else:
-            date_filter = None
-
-    # --- Apply Filters ---
     df_filtered = df.copy()
     if selected_status != "All":
         df_filtered = df_filtered[df_filtered["status"] == selected_status]
@@ -180,45 +141,41 @@ with tab3:
             df_filtered["name"].str.contains(search_term, case=False, na=False) |
             df_filtered["contact_number"].astype(str).str.contains(search_term, case=False, na=False)
         ]
-    if date_filter and len(date_filter) == 2:
-        start_date, end_date = date_filter
-        df_filtered = df_filtered[
-            (df_filtered["first_contacted"] >= pd.to_datetime(start_date)) &
-            (df_filtered["first_contacted"] <= pd.to_datetime(end_date))
-        ]
 
-    # --- Display Leads with Update/Delete ---
+    # --- Display Rows ---
     if not df_filtered.empty:
         for _, row in df_filtered.iterrows():
-            cols = st.columns([1.5, 1.5, 1.2, 1.2, 1.5, 2, 0.8, 0.8])
+            cols = st.columns([1.2,1.2,1.2,1.2,1.2,1.2,1.5,1.5,2,0.8,0.8])
             with cols[0]:
                 new_name = st.text_input(f"Name ({row['id']})", value=row["name"], key=f"name_{row['id']}")
             with cols[1]:
-                new_contact = st.text_input(f"Contact Number ({row['id']})", value=row["contact_number"], key=f"contact_{row['id']}")
+                new_contact = st.text_input(f"Contact ({row['id']})", value=row["contact_number"], key=f"contact_{row['id']}")
             with cols[2]:
-                new_source = st.selectbox(
-                    f"Source ({row['id']})",
-                    ["Instagram", "Referral", "Walk-in", "Other"],
-                    index=["Instagram", "Referral", "Walk-in", "Other"].index(row["source"]) if row["source"] in ["Instagram", "Referral", "Walk-in", "Other"] else 0,
-                    key=f"source_{row['id']}"
-                )
+                new_source = st.selectbox(f"Source ({row['id']})",
+                                          ["Instagram","Referral","Walk-in","Other"],
+                                          index=["Instagram","Referral","Walk-in","Other"].index(row["source"]) if row["source"] in ["Instagram","Referral","Walk-in","Other"] else 0,
+                                          key=f"source_{row['id']}")
             with cols[3]:
-                new_status = st.selectbox(
-                    f"Status ({row['id']})",
-                    ["pending", "processing", "onboarded", "rejected"],
-                    index=["pending", "processing", "onboarded", "rejected"].index(row["status"]) if row["status"] in ["pending", "processing", "onboarded", "rejected"] else 0,
-                    key=f"status_{row['id']}"
-                )
+                new_status = st.selectbox(f"Status ({row['id']})",
+                                          ["pending","processing","onboarded","rejected"],
+                                          index=["pending","processing","onboarded","rejected"].index(row["status"]) if row["status"] in ["pending","processing","onboarded","rejected"] else 0,
+                                          key=f"status_{row['id']}")
             with cols[4]:
-                new_first_contacted = st.date_input(
-                    f"First Contacted ({row['id']})",
+                new_first_contacted = st.date_input(f"First Contacted ({row['id']})",
                     value=row["first_contacted"].date() if pd.notnull(row["first_contacted"]) else pd.to_datetime("today").date(),
-                    key=f"first_contacted_{row['id']}"
-                )
+                    key=f"first_contacted_{row['id']}")
             with cols[5]:
-                new_notes = st.text_input(f"Notes ({row['id']})", value=row.get("notes", ""), key=f"notes_{row['id']}")
-
+                new_licence = st.selectbox(f"Licence ({row['id']})", ["yes","no"],
+                                           index=["yes","no"].index(row["licence"]) if row["licence"] in ["yes","no"] else 1,
+                                           key=f"licence_{row['id']}")
             with cols[6]:
+                new_walk_in = st.date_input(f"Scheduled Walk-in ({row['id']})",
+                    value=row["scheduled_walk_in"].date() if pd.notnull(row["scheduled_walk_in"]) else None,
+                    key=f"walkin_{row['id']}")
+            with cols[7]:
+                new_notes = st.text_input(f"Notes ({row['id']})", value=row.get("notes",""), key=f"notes_{row['id']}")
+
+            with cols[8]:
                 if st.button("✅", key=f"update_{row['id']}"):
                     update_lead_status(
                         lead_id=row['id'],
@@ -227,36 +184,39 @@ with tab3:
                         source=new_source,
                         status=new_status,
                         first_contacted=pd.to_datetime(new_first_contacted),
-                        notes=new_notes
+                        notes=new_notes,
+                        licence=new_licence,
+                        scheduled_walk_in=pd.to_datetime(new_walk_in) if new_walk_in else None
                     )
                     st.success(f"Lead {new_name} updated!")
                     st.rerun()
 
-            with cols[7]:
+            with cols[9]:
                 if st.button("🗑️", key=f"del_{row['id']}"):
                     delete_lead(row['id'])
                     st.success(f"Lead {row['name']} deleted!")
                     st.rerun()
     else:
-        st.info("No leads match your filters.")
+        st.info("No leads found.")
 
-# --- Tab 4: Bulk Upload ---
+
+# =====================================================
+# TAB 4: BULK UPLOAD
+# =====================================================
 with tab4:
-    st.markdown("### 📂 Bulk Upload Leads")
+    st.subheader("📂 Bulk Upload Leads")
 
-    # Download template
-    template_df = pd.DataFrame(columns=["name", "contact_number", "address", "source", "status","first_contacted", "notes"])
+    # Template
+    template_df = pd.DataFrame(columns=[
+        "name","contact_number","address","source","status","first_contacted","notes","licence","scheduled_walk_in"
+    ])
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         template_df.to_excel(writer, index=False, sheet_name='Leads_Template')
-    st.download_button(
-        label="Download Excel Template",
-        data=output.getvalue(),
-        file_name="lead_upload_template.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    st.download_button("📥 Download Excel Template", output.getvalue(), "lead_upload_template.xlsx")
 
-    uploaded_file = st.file_uploader("Upload CSV or Excel file", type=["csv", "xlsx"])
+    # Upload
+    uploaded_file = st.file_uploader("Upload CSV or Excel file", type=["csv","xlsx"])
     if uploaded_file:
         try:
             if uploaded_file.name.endswith(".csv"):
@@ -268,8 +228,10 @@ with tab4:
             st.stop()
 
         # Validation
-        valid_status = ["pending", "processing", "onboarded", "rejected"]
-        valid_source = ["Instagram", "Referral", "Walk-in", "Other"]
+        valid_status = ["pending","processing","onboarded","rejected"]
+        valid_source = ["Instagram","Referral","Walk-in","Other"]
+        valid_licence = ["yes","no"]
+
         df_upload["is_valid"] = True
         df_upload["errors"] = ""
 
@@ -281,6 +243,8 @@ with tab4:
                 errors.append("Invalid status")
             if row.get("source") not in valid_source:
                 errors.append("Invalid source")
+            if row.get("licence") not in valid_licence:
+                errors.append("Invalid licence")
             if errors:
                 df_upload.at[idx, "is_valid"] = False
                 df_upload.at[idx, "errors"] = ", ".join(errors)
@@ -290,19 +254,16 @@ with tab4:
 
         if st.button("✅ Insert Valid Leads"):
             valid_rows = df_upload[df_upload["is_valid"]]
-            invalid_rows = df_upload[~df_upload["is_valid"]]
-
             for _, row in valid_rows.iterrows():
                 insert_lead(
                     row["name"],
                     row["contact_number"],
-                    row.get("address", ""),
-                    row.get("source", ""),
-                    row.get("status", "pending"),
-                    row.get("notes", "")
+                    row.get("address",""),
+                    row.get("source",""),
+                    row.get("status","pending"),
+                    row.get("first_contacted"),
+                    row.get("notes",""),
+                    row.get("licence","no"),
+                    row.get("scheduled_walk_in")
                 )
-
-
             st.success(f"{len(valid_rows)} leads inserted successfully!")
-            if not invalid_rows.empty:
-                st.warning(f"{len(invalid_rows)} rows failed validation. Check 'errors' column above.")
