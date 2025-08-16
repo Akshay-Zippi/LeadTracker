@@ -135,26 +135,31 @@ with tab3:
     if "scheduled_walk_in" in df.columns:
         df["scheduled_walk_in"] = pd.to_datetime(df["scheduled_walk_in"], errors="coerce")
 
-    # Display Leads with Update/Delete
+    # --- Display Leads with Update/Delete ---
     if not df.empty:
         for _, row in df.iterrows():
+            # 9 columns → indices 0 to 8
             cols = st.columns([1.5, 1.5, 1.2, 1.2, 1.2, 1.2, 2, 0.8, 0.8])
+
             with cols[0]:
                 new_name = st.text_input(f"Name ({row['id']})", value=row["name"], key=f"name_{row['id']}")
             with cols[1]:
-                new_contact = st.text_input(f"Contact Number ({row['id']})", value=row["contact_number"], key=f"contact_{row['id']}")
+                new_contact = st.text_input(f"Contact Number ({row['id']})", value=row["contact_number"],
+                                            key=f"contact_{row['id']}")
             with cols[2]:
                 new_source = st.selectbox(
                     f"Source ({row['id']})",
                     ["Instagram", "Referral", "Walk-in", "Other"],
-                    index=["Instagram", "Referral", "Walk-in", "Other"].index(row["source"]) if row["source"] in ["Instagram", "Referral", "Walk-in", "Other"] else 0,
+                    index=["Instagram", "Referral", "Walk-in", "Other"].index(row["source"]) if row["source"] in [
+                        "Instagram", "Referral", "Walk-in", "Other"] else 0,
                     key=f"source_{row['id']}"
                 )
             with cols[3]:
                 new_status = st.selectbox(
                     f"Status ({row['id']})",
                     ["pending", "processing", "onboarded", "rejected"],
-                    index=["pending", "processing", "onboarded", "rejected"].index(row["status"]) if row["status"] in ["pending", "processing", "onboarded", "rejected"] else 0,
+                    index=["pending", "processing", "onboarded", "rejected"].index(row["status"]) if row["status"] in [
+                        "pending", "processing", "onboarded", "rejected"] else 0,
                     key=f"status_{row['id']}"
                 )
             with cols[4]:
@@ -167,7 +172,8 @@ with tab3:
             with cols[5]:
                 new_first_contacted = st.date_input(
                     f"First Contacted ({row['id']})",
-                    value=row["first_contacted"].date() if pd.notnull(row["first_contacted"]) else pd.to_datetime("today").date(),
+                    value=row["first_contacted"].date() if pd.notnull(row["first_contacted"]) else pd.to_datetime(
+                        "today").date(),
                     key=f"first_contacted_{row['id']}"
                 )
             with cols[6]:
@@ -180,28 +186,29 @@ with tab3:
                 new_notes = st.text_input(f"Notes ({row['id']})", value=row.get("notes", ""), key=f"notes_{row['id']}")
 
             with cols[8]:
-                if st.button("✅", key=f"update_{row['id']}"):
-                    update_lead_status(
-                        lead_id=row['id'],
-                        name=new_name,
-                        contact_number=new_contact,
-                        source=new_source,
-                        status=new_status,
-                        licence=new_licence,
-                        first_contacted=pd.to_datetime(new_first_contacted) if new_first_contacted else None,
-                        scheduled_walk_in=pd.to_datetime(new_walkin) if new_walkin else None,
-                        notes=new_notes
-                    )
-                    st.success(f"Lead {new_name} updated!")
-                    st.rerun()
+                update_col, delete_col = st.columns([0.5, 0.5])
 
-            with cols[9]:
-                if st.button("🗑️", key=f"del_{row['id']}"):
-                    delete_lead(row['id'])
-                    st.success(f"Lead {row['name']} deleted!")
-                    st.rerun()
-    else:
-        st.info("No leads available.")
+                with update_col:
+                    if st.button("✅", key=f"update_{row['id']}"):
+                        update_lead_status(
+                            lead_id=row['id'],
+                            name=new_name,
+                            contact_number=new_contact,
+                            source=new_source,
+                            status=new_status,
+                            licence=new_licence,
+                            first_contacted=pd.to_datetime(new_first_contacted) if new_first_contacted else None,
+                            scheduled_walk_in=pd.to_datetime(new_walkin) if new_walkin else None,
+                            notes=new_notes
+                        )
+                        st.success(f"Lead {new_name} updated!")
+                        st.rerun()
+
+                with delete_col:
+                    if st.button("🗑️", key=f"del_{row['id']}"):
+                        delete_lead(row['id'])
+                        st.success(f"Lead {row['name']} deleted!")
+                        st.rerun()
 
 # --- Tab 4: Bulk Upload ---
 with tab4:
