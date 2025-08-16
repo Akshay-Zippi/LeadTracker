@@ -1,9 +1,9 @@
-# db1.py
+# db.py
 import os
 import pandas as pd
 import psycopg2
 import streamlit as st
-from psycopg2.extras import RealDictCursor
+from sqlalchemy import create_engine
 
 # Load local .env when present (so you can keep developing locally)
 if os.path.exists(".env"):
@@ -17,22 +17,27 @@ DB_NAME = os.getenv("DB_NAME") or st.secrets.get("DB_NAME")
 DB_USER = os.getenv("DB_USER") or st.secrets.get("DB_USER")
 DB_PASS = os.getenv("DB_PASS") or st.secrets.get("DB_PASS")
 
+# --- SQLAlchemy Engine (preferred for pandas) ---
+engine = create_engine(
+    f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+
 def get_connection():
-    # If any of these are None, this will raise — good for failing fast
+    # Still keep psycopg2 for manual cursor usage (insert/update/delete)
     conn = psycopg2.connect(
         host=DB_HOST,
         port=int(DB_PORT) if DB_PORT else None,
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASS,
-        sslmode="require"  # Keeps it safe for hosted Postgres like Supabase; remove if not needed
+        sslmode="require"
     )
     return conn
 
+# --- Cached Query for Leads ---
+@st.cache_data(ttl=60)   # cache results for 60s
 def get_all_leads():
-    with get_connection() as conn:
-        df = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
-    return df
+    return pd.read_sql("SELECT * FROM leads ORDER BY id DESC", engine)
 
 def insert_lead(name, contact, address, source, status, first_contacted=None, notes=None):
     with get_connection() as conn:
@@ -47,6 +52,7 @@ def insert_lead(name, contact, address, source, status, first_contacted=None, no
                  notes)
             )
         conn.commit()
+    st.cache_data.clear()  # clear cache after insert
 
 def update_lead_status(
     lead_id,
@@ -59,10 +65,12 @@ def update_lead_status(
 ):
     with get_connection() as conn:
         with conn.cursor() as cur:
+            # get old status
             cur.execute("SELECT status FROM leads WHERE id=%s", (lead_id,))
             row = cur.fetchone()
             old_status = row[0] if row else None
 
+            # update main table
             cur.execute(
                 """
                 UPDATE leads
@@ -76,10 +84,10 @@ def update_lead_status(
                 WHERE id=%s
                 """,
                 (name, contact_number, source, status,
-                 first_contacted,  # can be None
-                 notes, lead_id)
+                 first_contacted, notes, lead_id)
             )
 
+            # insert history if status changed
             if old_status and old_status != status:
                 cur.execute(
                     """
@@ -89,9 +97,11 @@ def update_lead_status(
                     (lead_id, old_status, status, notes)
                 )
         conn.commit()
+    st.cache_data.clear()  # clear cache after update
 
 def delete_lead(lead_id):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM leads WHERE id = %s", (lead_id,))
         conn.commit()
+    st.cache_data.clear()  # clear cache after delete
