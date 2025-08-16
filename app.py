@@ -171,11 +171,13 @@ with tab3:
             max_date = df["first_contacted"].dropna().max().date()
             date_filter = st.date_input(
                 "Date Between",
-                (min_date, max_date),
+                value=[],  # <-- keep it blank by default
+                min_value=min_date,
+                max_value=max_date,
                 key="manage_date_filter"
             )
         else:
-            date_filter = None
+            date_filter = []
 
     # --- Apply Filters ---
     df_filtered = df.copy()
@@ -193,7 +195,7 @@ with tab3:
         df_filtered = df_filtered[
             (df_filtered["first_contacted"] >= pd.to_datetime(start_date)) &
             (df_filtered["first_contacted"] <= pd.to_datetime(end_date))
-        ]
+            ]
 
     # --- Editable Rows ---
     if not df_filtered.empty:
