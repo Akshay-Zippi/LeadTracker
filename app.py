@@ -123,14 +123,15 @@ with tab2:
 # --- Tab 3: Manage Leads ---
 with tab3:
     st.markdown("""
-        <style>
-        div[data-testid="stVerticalBlock"] > div:nth-of-type(4) {
-            background-color: rgba(100, 143, 137, 0.5) !important;
-            padding: 20px;
-            border-radius: 10px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+                <style>
+                /* Target only the container that holds tab1's content */
+                div[data-testid="stVerticalBlock"] > div:nth-of-type(4) {
+                    background-color: rgba(100, 143, 137, 0.5) !important;
+                    padding: 20px;
+                    border-radius: 10px;
+                }
+                </style>
+            """, unsafe_allow_html=True)
 
     st.subheader("Manage Leads")
     df = get_all_leads()
@@ -138,16 +139,34 @@ with tab3:
     if "first_contacted" in df.columns:
         df["first_contacted"] = pd.to_datetime(df["first_contacted"], errors="coerce")
 
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        selected_status = st.selectbox("Status", ["All"] + df["status"].dropna().unique().tolist(), index=0)
-    with col2:
-        selected_source = st.selectbox("Source", ["All"] + df["source"].dropna().unique().tolist(), index=0)
-    with col3:
-        search_term = st.text_input("Search name/contact")
+    # --- Compact Filters ---
+    st.markdown("### Filters")
+    col1, col2, col3, col4 = st.columns([1.5, 1.5, 2, 2])
 
-    # Apply filters
+    with col1:
+        selected_status = st.selectbox("Status", ["All"] + df["status"].dropna().unique().tolist(), index=0, key="manage_status")
+
+    with col2:
+        selected_source = st.selectbox("Source", ["All"] + df["source"].dropna().unique().tolist(), index=0, key="manage_source")
+
+    with col3:
+        search_term = st.text_input("Search", key="manage_search")
+
+    with col4:
+        if "first_contacted" in df.columns and not df["first_contacted"].dropna().empty:
+            min_date = df["first_contacted"].dropna().min().date()
+            max_date = df["first_contacted"].dropna().max().date()
+            date_filter = st.date_input(
+                "Date Between",
+                (min_date, max_date),
+                key="manage_date"
+
+            )
+
+        else:
+            date_filter = None
+
+    # --- Apply Filters ---
     df_filtered = df.copy()
     if selected_status != "All":
         df_filtered = df_filtered[df_filtered["status"] == selected_status]
@@ -158,45 +177,43 @@ with tab3:
             df_filtered["name"].str.contains(search_term, case=False, na=False) |
             df_filtered["contact_number"].astype(str).str.contains(search_term, case=False, na=False)
         ]
+    if date_filter and len(date_filter) == 2:
+        start_date, end_date = date_filter
+        df_filtered = df_filtered[
+            (df_filtered["first_contacted"] >= pd.to_datetime(start_date)) &
+            (df_filtered["first_contacted"] <= pd.to_datetime(end_date))
+        ]
 
-    # Editable rows
+    # --- Display Leads with Update/Delete ---
     if not df_filtered.empty:
-        for _, row in df_filtered.iterrows():
-            with st.container():
-                cols = st.columns([1.5, 1.5, 1.2, 1.2, 1.5, 2, 0.8, 0.8])
-
-                # Editable inputs
-                name_input = cols[0].text_input("Name", value=row["name"], key=f"name_{row['id']}")
-                contact_input = cols[1].text_input("Contact", value=row["contact_number"], key=f"contact_{row['id']}")
-                source_input = cols[2].selectbox("Source", ["Instagram", "Referral", "Walk-in", "Other"],
-                                                 index=["Instagram", "Referral", "Walk-in", "Other"].index(row["source"]),
-                                                 key=f"source_{row['id']}")
-                status_input = cols[3].selectbox("Status", ["pending", "processing", "onboarded", "rejected"],
-                                                 index=["pending", "processing", "onboarded", "rejected"].index(row["status"]),
-                                                 key=f"status_{row['id']}")
-                date_input = cols[4].date_input("First Contacted",
-                                                value=row["first_contacted"].date() if pd.notnull(row["first_contacted"]) else None,
-                                                key=f"date_{row['id']}")
-                notes_input = cols[5].text_input("Notes", value=row.get("notes", ""), key=f"notes_{row['id']}")
-
-                # Update & delete buttons
-                if cols[6].button("✅", key=f"update_{row['id']}"):
-                    update_lead_status(
-                        row['id'],
-                        status_input,
-                        notes_input,
-                        name_input,
-                        contact_input,
-                        source_input,
-                        date_input
-                    )
-                    st.success(f"Lead {name_input} updated!")
+        for index, row in df_filtered.iterrows():
+            # Adjust column widths so status & notes are side-by-side
+            cols = st.columns([2, 1, 3, 0.8, 0.8])
+            with cols[0]:
+                st.write(f"**{row['name']}** - {row['contact_number']} - {row['status']}")
+            with cols[1]:
+                new_status = st.selectbox(
+                    f"Status ({row['id']})",
+                    ["pending", "processing", "onboarded", "rejected"],
+                    index=["pending", "processing", "onboarded", "rejected"].index(row["status"]),
+                    key=f"status_{row['id']}"
+                )
+            with cols[2]:
+                update_notes = st.text_input(
+                    f"Notes ({row['id']})",
+                    value=row.get("notes", ""),
+                    key=f"notes_{row['id']}"
+                )
+            with cols[3]:
+                if st.button("✅", key=f"update_{row['id']}"):
+                    update_lead_status(row['id'], new_status, update_notes)
+                    st.success(f"Lead {row['name']} updated!")
                     st.rerun()
-
-                if cols[7].button("🗑️", key=f"delete_{row['id']}"):
+            with cols[4]:
+                if st.button("🗑️", key=f"del_{row['id']}"):
                     delete_lead(row['id'])
-                    st.success(f"Lead {name_input} deleted!")
-                    st.rerun()
+                    st.success(f"Lead {row['name']} deleted!")
+
     else:
         st.info("No leads match your filters.")
 
