@@ -106,15 +106,17 @@ with tab1:
 # --- Tab 2: Add Lead ---
 with tab2:
     st.subheader("Add New Lead")
-    name = st.text_input("Name")
-    contact = st.text_input("Contact Number")
-    address = st.text_area("Address")
+
+    # Inputs with session state
+    name = st.text_input("Name", key="add_name")
+    contact = st.text_input("Contact Number", key="add_contact")
+    address = st.text_area("Address", key="add_address")
     source = st.selectbox("Source", ["Instagram", "Referral", "Walk-in", "Other"], key="add_source")
     status = st.selectbox("Status", ["pending", "processing", "onboarded", "rejected"], key="add_status")
-    licence = st.selectbox("Licence", ["unknown", "yes", "no"],index=0, key="add_licence")
+    licence = st.selectbox("Licence", ["unknown", "yes", "no"], index=0, key="add_licence")
     first_contacted = st.date_input("First Contacted", value=None, key="add_first_contacted")
     scheduled_walk_in = st.date_input("Scheduled Walk-in", value=None, key="add_scheduled_walkin")
-    notes = st.text_area("Notes")
+    notes = st.text_area("Notes", key="add_notes")
 
     if st.button("Save Lead", key="save_lead"):
         if name and contact:
@@ -130,7 +132,21 @@ with tab2:
                 scheduled_walk_in=scheduled_walk_in
             )
             st.success("✅ Lead Added Successfully!")
+
+            # Clear cached leads so All Leads tab reloads
             st.cache_data.clear()
+
+            # Reset form fields
+            for field in [
+                "add_name", "add_contact", "add_address",
+                "add_source", "add_status", "add_licence",
+                "add_first_contacted", "add_scheduled_walkin",
+                "add_notes"
+            ]:
+                if field in st.session_state:
+                    del st.session_state[field]
+
+            # Force page refresh
             st.rerun()
         else:
             st.warning("⚠️ Name & Contact are required.")
