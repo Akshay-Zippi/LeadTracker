@@ -187,29 +187,59 @@ with tab3:
     # --- Display Leads with Update/Delete ---
     if not df_filtered.empty:
         for index, row in df_filtered.iterrows():
-            # Adjust column widths so status & notes are side-by-side
-            cols = st.columns([2, 1, 3, 0.8, 0.8])
+            cols = st.columns([1.5, 1.5, 1.2, 1.2, 1.5, 2, 0.8, 0.8])
             with cols[0]:
-                st.write(f"**{row['name']}** - {row['contact_number']} - {row['status']}")
+                new_name = st.text_input(
+                    f"Name ({row['id']})",
+                    value=row["name"],
+                    key=f"name_{row['id']}"
+                )
             with cols[1]:
+                new_contact = st.text_input(
+                    f"Contact Number ({row['id']})",
+                    value=row["contact_number"],
+                    key=f"contact_{row['id']}"
+                )
+            with cols[2]:
+                new_source = st.selectbox(
+                    f"Source ({row['id']})",
+                    ["Instagram", "Referral", "Walk-in", "Other"],
+                    index=["Instagram", "Referral", "Walk-in", "Other"].index(row["source"]) if row["source"] in ["Instagram", "Referral", "Walk-in", "Other"] else 0,
+                    key=f"source_{row['id']}"
+                )
+            with cols[3]:
                 new_status = st.selectbox(
                     f"Status ({row['id']})",
                     ["pending", "processing", "onboarded", "rejected"],
                     index=["pending", "processing", "onboarded", "rejected"].index(row["status"]),
                     key=f"status_{row['id']}"
                 )
-            with cols[2]:
-                update_notes = st.text_input(
+            with cols[4]:
+                new_first_contacted = st.date_input(
+                    f"First Contacted ({row['id']})",
+                    value=row["first_contacted"].date() if pd.notnull(row["first_contacted"]) else pd.to_datetime("today").date(),
+                    key=f"first_contacted_{row['id']}"
+                )
+            with cols[5]:
+                new_notes = st.text_input(
                     f"Notes ({row['id']})",
                     value=row.get("notes", ""),
                     key=f"notes_{row['id']}"
                 )
-            with cols[3]:
+            with cols[6]:
                 if st.button("✅", key=f"update_{row['id']}"):
-                    update_lead_status(row['id'], new_status, update_notes)
-                    st.success(f"Lead {row['name']} updated!")
+                    update_lead_status(
+                        row['id'],
+                        new_status,
+                        new_notes,
+                        new_name,
+                        new_contact,
+                        new_source,
+                        new_first_contacted
+                    )
+                    st.success(f"Lead {new_name} updated!")
                     st.rerun()
-            with cols[4]:
+            with cols[7]:
                 if st.button("🗑️", key=f"del_{row['id']}"):
                     delete_lead(row['id'])
                     st.success(f"Lead {row['name']} deleted!")
