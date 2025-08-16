@@ -285,9 +285,12 @@ with tab3:
 
 # --- Tab 4: Bulk Upload ---
 with tab4:
-    st.subheader("📂 Bulk Upload Leads")
+    st.markdown("### 📂 Bulk Upload Leads")
+
+    # Download template
     template_df = pd.DataFrame(columns=[
-        "name", "contact_number", "address", "source", "status", "licence", "first_contacted", "scheduled_walk_in", "notes"
+        "name", "contact_number", "address", "source", "status",
+        "first_contacted", "licence", "scheduled_walk_in", "notes"
     ])
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -310,6 +313,7 @@ with tab4:
             st.error(f"Error reading file: {e}")
             st.stop()
 
+        # Validation
         valid_status = ["pending", "processing", "onboarded", "rejected"]
         valid_source = ["Instagram", "Referral", "Walk-in", "Other"]
         valid_licence = ["Yes", "No"]
@@ -326,7 +330,8 @@ with tab4:
             if row.get("source") not in valid_source:
                 errors.append("Invalid source")
             if row.get("licence") not in valid_licence:
-                errors.append("Invalid licence")
+                errors.append("Invalid licence (must be Yes/No)")
+
             if errors:
                 df_upload.at[idx, "is_valid"] = False
                 df_upload.at[idx, "errors"] = ", ".join(errors)
@@ -334,21 +339,21 @@ with tab4:
         st.markdown("#### Preview Uploaded Leads")
         st.dataframe(df_upload)
 
-        if st.button("✅ Insert Valid Leads"):
+        if st.button("✅ Insert Valid Leads", key="insert_bulk_leads"):
             valid_rows = df_upload[df_upload["is_valid"]]
             invalid_rows = df_upload[~df_upload["is_valid"]]
 
             for _, row in valid_rows.iterrows():
                 insert_lead(
-                    row["name"],
-                    row["contact_number"],
-                    row.get("address", ""),
-                    row.get("source", ""),
-                    row.get("status", "pending"),
-                    row.get("first_contacted", None),
-                    row.get("licence", "No"),
-                    row.get("scheduled_walk_in", None),
-                    row.get("notes", "")
+                    name=row.get("name"),
+                    contact=row.get("contact_number"),
+                    address=row.get("address", ""),
+                    source=row.get("source", ""),
+                    status=row.get("status", "pending"),
+                    first_contacted=pd.to_datetime(row.get("first_contacted"), errors="coerce") if row.get("first_contacted") else None,
+                    notes=row.get("notes", ""),
+                    licence=row.get("licence", "No"),
+                    scheduled_walk_in=pd.to_datetime(row.get("scheduled_walk_in"), errors="coerce") if row.get("scheduled_walk_in") else None
                 )
 
             st.success(f"{len(valid_rows)} leads inserted successfully!")
