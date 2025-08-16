@@ -48,7 +48,7 @@ def insert_lead(name, contact, address, source, status, first_contacted=None, no
             )
         conn.commit()
 
-def update_lead_status(lead_id, new_status, notes=""):
+def update_lead_status(lead_id, name, contact_number, source, status, first_contacted=None, notes=""):
     with get_connection() as conn:
         with conn.cursor() as cur:
             # get old status
@@ -60,10 +60,18 @@ def update_lead_status(lead_id, new_status, notes=""):
             cur.execute(
                 """
                 UPDATE leads
-                SET status=%s, notes=%s, updated_at=NOW()
+                SET name=%s,
+                    contact_number=%s,
+                    source=%s,
+                    status=%s,
+                    first_contacted=%s,
+                    notes=%s,
+                    updated_at=NOW()
                 WHERE id=%s
                 """,
-                (new_status, notes, lead_id)
+                (name, contact_number, source, status,
+                 first_contacted if first_contacted is not None else None,
+                 notes, lead_id)
             )
 
             # insert history record
@@ -72,7 +80,7 @@ def update_lead_status(lead_id, new_status, notes=""):
                 INSERT INTO lead_history (lead_id, old_status, new_status, changed_at, notes)
                 VALUES (%s, %s, %s, NOW(), %s)
                 """,
-                (lead_id, old_status, new_status, notes)
+                (lead_id, old_status, status, notes)
             )
         conn.commit()
 
