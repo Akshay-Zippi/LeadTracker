@@ -111,7 +111,7 @@ with tab2:
     address = st.text_area("Address")
     source = st.selectbox("Source", ["Instagram", "Referral", "Walk-in", "Other"], key="add_source")
     status = st.selectbox("Status", ["pending", "processing", "onboarded", "rejected"], key="add_status")
-    licence = st.selectbox("Licence", ["Yes", "No"], key="add_licence")
+    licence = st.selectbox("Licence", ["unknown", "yes", "no"],index=0, key="add_licence")
     first_contacted = st.date_input("First Contacted", value=None, key="add_first_contacted")
     scheduled_walk_in = st.date_input("Scheduled Walk-in", value=None, key="add_scheduled_walkin")
     notes = st.text_area("Notes")
@@ -316,7 +316,7 @@ with tab4:
         # Validation
         valid_status = ["pending", "processing", "onboarded", "rejected"]
         valid_source = ["Instagram", "Referral", "Walk-in", "Other"]
-        valid_licence = ["Yes", "No"]
+        valid_licence = ["unknown", "yes", "no"]
 
         df_upload["is_valid"] = True
         df_upload["errors"] = ""
@@ -330,7 +330,7 @@ with tab4:
             if row.get("source") not in valid_source:
                 errors.append("Invalid source")
             if row.get("licence") not in valid_licence:
-                errors.append("Invalid licence (must be Yes/No)")
+                errors.append("Invalid licence (must be Unknown/yes/no)")
 
             if errors:
                 df_upload.at[idx, "is_valid"] = False
