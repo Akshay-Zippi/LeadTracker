@@ -48,7 +48,7 @@ def insert_lead(name, contact, address, source, status, first_contacted=None, no
             )
         conn.commit()
 
-def update_lead(
+def update_lead_status(
     lead_id,
     name,
     contact_number,
