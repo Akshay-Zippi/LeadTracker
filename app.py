@@ -136,15 +136,16 @@ with tab2:
             # Clear cached leads so All Leads tab reloads
             st.cache_data.clear()
 
-            # Reset form fields
-            for field in [
-                "add_name", "add_contact", "add_address",
-                "add_source", "add_status", "add_licence",
-                "add_first_contacted", "add_scheduled_walkin",
-                "add_notes"
-            ]:
-                if field in st.session_state:
-                    del st.session_state[field]
+            # Reset form values explicitly
+            st.session_state["add_name"] = ""
+            st.session_state["add_contact"] = ""
+            st.session_state["add_address"] = ""
+            st.session_state["add_notes"] = ""
+            st.session_state["add_source_idx"] = 0
+            st.session_state["add_status_idx"] = 0
+            st.session_state["add_licence_idx"] = 0
+            st.session_state["add_first_contacted"] = None
+            st.session_state["add_scheduled_walkin"] = None
 
             # Force page refresh
             st.rerun()
