@@ -4,6 +4,7 @@ import pandas as pd
 import psycopg2
 import streamlit as st
 from sqlalchemy import create_engine
+from urllib.parse import quote_plus
 
 # Load local .env when present (so you can keep developing locally)
 if os.path.exists(".env"):
@@ -18,8 +19,9 @@ DB_USER = os.getenv("DB_USER") or st.secrets.get("DB_USER")
 DB_PASS = os.getenv("DB_PASS") or st.secrets.get("DB_PASS")
 
 # --- SQLAlchemy Engine (preferred for pandas) ---
+password = quote_plus(DB_PASS)  # encodes special chars like @, #, etc.
 engine = create_engine(
-    f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    f"postgresql+psycopg2://{DB_USER}:{password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
 
 def get_connection():
