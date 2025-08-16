@@ -68,7 +68,7 @@ with tab1:
         )
     with col4:
         selected_license = st.selectbox(
-            "Licence", ["All", "Yes", "No"], index=0, key="filter_license"
+            "Licence", ["All", "yes", "no"], index=0, key="filter_license"
         )
     with col5:
         selected_walkin = st.date_input(
