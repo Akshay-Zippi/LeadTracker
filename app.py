@@ -267,16 +267,22 @@ with tab3:
                 )
 
             with cols[6]:
-                # If value is null -> keep it blank
+                # Handle NULL gracefully
+                if pd.notnull(row["scheduled_walk_in"]):
+                    walkin_value = row["scheduled_walk_in"].date()
+                else:
+                    walkin_value = None
+
                 new_walk_in = st.date_input(
                     f"Scheduled Walk-in ({row['id']})",
-                    value=row["scheduled_walk_in"].date() if pd.notnull(row["scheduled_walk_in"]) else None,
-                    key=f"walkin_{row['id']}"
+                    value=walkin_value if walkin_value else pd.to_datetime("1900-01-01").date(),  # dummy
+                    key=f"walkin_{row['id']}",
+                    min_value=pd.to_datetime("1900-01-01").date()
                 )
 
-                # Convert to None if user doesn't pick a date
-                if isinstance(new_walk_in, list):  # if multiple dates are returned accidentally
-                    new_walk_in = new_walk_in[0] if new_walk_in else None
+                # If user leaves it as dummy date, treat as NULL
+                if new_walk_in == pd.to_datetime("1900-01-01").date():
+                    new_walk_in = None
 
             with cols[7]:
                 new_notes = st.text_input(f"Notes ({row['id']})", value=row.get("notes", ""), key=f"notes_{row['id']}")
