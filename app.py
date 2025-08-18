@@ -267,21 +267,20 @@ with tab3:
                 )
 
             with cols[6]:
-                # Handle NULL gracefully
-                if pd.notnull(row["scheduled_walk_in"]):
-                    walkin_value = row["scheduled_walk_in"].date()
-                else:
-                    walkin_value = None
-
-                new_walk_in = st.date_input(
-                    f"Scheduled Walk-in ({row['id']})",
-                    value=walkin_value if walkin_value else pd.to_datetime("1900-01-01").date(),  # dummy
-                    key=f"walkin_{row['id']}",
-                    min_value=pd.to_datetime("1900-01-01").date()
+                has_walkin = st.checkbox(
+                    f"Has Scheduled Walk-in? ({row['id']})",
+                    value=pd.notnull(row["scheduled_walk_in"]),
+                    key=f"walkin_chk_{row['id']}"
                 )
 
-                # If user leaves it as dummy date, treat as NULL
-                if new_walk_in == pd.to_datetime("1900-01-01").date():
+                if has_walkin:
+                    new_walk_in = st.date_input(
+                        f"Scheduled Walk-in ({row['id']})",
+                        value=row["scheduled_walk_in"].date() if pd.notnull(
+                            row["scheduled_walk_in"]) else pd.to_datetime("today").date(),
+                        key=f"walkin_{row['id']}"
+                    )
+                else:
                     new_walk_in = None
 
             with cols[7]:
