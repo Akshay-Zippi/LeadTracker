@@ -120,7 +120,7 @@ with tab2:
 
     if st.button("Save Lead", key="save_lead"):
         if name and contact:
-            insert_lead(
+            success = insert_lead(
                 name=name,
                 contact=contact,
                 address=address,
@@ -131,21 +131,16 @@ with tab2:
                 licence=licence,
                 scheduled_walk_in=scheduled_walk_in
             )
-            st.success("✅ Lead Added Successfully!")
+            if success:
+                st.success("✅ Lead Added Successfully!")
+                st.rerun()
 
-            # Clear cached leads so All Leads tab reloads
-            st.cache_data.clear()
-
-            # Reset form values explicitly
-            st.session_state["add_name"] = ""
-            st.session_state["add_contact"] = ""
-            st.session_state["add_address"] = ""
-            st.session_state["add_notes"] = ""
-            st.session_state["add_source_idx"] = 0
-            st.session_state["add_status_idx"] = 0
-            st.session_state["add_licence_idx"] = 0
-            st.session_state["add_first_contacted"] = None
-            st.session_state["add_scheduled_walkin"] = None
+            for key in [
+                "add_name", "add_contact", "add_address", "add_notes",
+                "add_source", "add_status", "add_licence",
+                "add_first_contacted", "add_scheduled_walkin"
+            ]:
+                st.session_state.pop(key, None)  # removes if exists, ignores if not
 
             # Force page refresh
             st.rerun()
