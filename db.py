@@ -81,27 +81,26 @@ def insert_lead(
 
 def lead_exists(contact):
     """Check if a lead with the same contact number already exists."""
-    df = get_all_leads()
-    return not df[df["contact_number"].astype(str) == str(contact)].empty
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM leads WHERE contact_number = %s LIMIT 1", (contact,))
+            return cur.fetchone() is not None
 
-def insert_lead(name, contact, address, source, status, first_contacted=None, notes=None, licence="unknown", scheduled_walk_in=None):
-    if lead_exists(contact):
-        st.warning("⚠️ Lead with this contact number already exists!")
-        return False  # don't insert
-
+def insert_lead(name, contact, address, source, status,
+                first_contacted=None, notes=None, licence="unknown", scheduled_walk_in=None):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO leads (name, contact_number, address, source, status, first_contacted, notes, licence, scheduled_walk_in)
+                    INSERT INTO leads 
+                    (name, contact_number, address, source, status, first_contacted, notes, licence, scheduled_walk_in)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         name, contact, address, source, status,
                         first_contacted if first_contacted else None,
-                        notes, licence.lower() if licence else "unknown",
-                        scheduled_walk_in
+                        notes, licence, scheduled_walk_in
                     )
                 )
             conn.commit()
@@ -109,8 +108,10 @@ def insert_lead(name, contact, address, source, status, first_contacted=None, no
         return True
 
     except psycopg2.errors.UniqueViolation:
-        st.warning("⚠️ Lead with this contact number already exists in database!")
+        # Duplicate caught at DB level
+        st.warning("⚠️ A lead with this contact number already exists!")
         return False
+
     except Exception as e:
         st.error(f"❌ Error inserting lead: {e}")
         return False
